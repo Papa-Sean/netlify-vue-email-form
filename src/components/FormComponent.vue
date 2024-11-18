@@ -17,17 +17,18 @@
       <!-- Create input field for email -->
       <!-- ":class" is Vue syntax that binds "input-error" class if "emailError" is true -->
       <!-- "v-model" is Vue syntax that updates Vue "data()" object / two way data binding -->
+      <!-- Since refactored to create a Vue "ref" variable so input could be cleared without changing state -->
       <input
         type="email"
         id="email"
-        v-model="email"
-        :class="{ 'input-error': emailError }"
+        v-model="emailInput"
+        :class="{ 'input-error': formStore.emailError }"
         class="mx-10 h-14 p-5 bg-slate-200 rounded-md block"
       />
       <!-- "v-if" is Vue syntax that allows for conditional rendering -->
       <!-- If "emailError == true" the span will render -->
       <span
-        v-if="emailError"
+        v-if="formStore.emailError"
         class="error-message"
         >Invalid email</span
       >
@@ -40,8 +41,9 @@
           Submit
         </button>
         <!-- "v-if" allows for conditional rendering if "completed == true" in Vue data() object -->
+        <!-- refactored to look for formStore object state -->
         <div
-          v-if="completed"
+          v-if="formStore.isCompleteDisplay"
           class="m-10 text-center text-green-500 font-bold text-4xl"
         >
           Complete!
@@ -52,41 +54,49 @@
 </template>
 
 <script>
-// Create/export data object to App.vue
+// Import "formStore" from "formStore.js"
+import { useFormStore } from '../stores/formStore';
+import { ref } from 'vue';
+
+// Refactor to use formStore not data() object
 export default {
-  data() {
-    return {
-      email: '',
-      emailError: false,
-      completed: false,
-    };
-  },
-  // Methods is an object that holds functions
-  methods: {
-    // Create a function to validate email
-    validateEmail(email) {
-      // Regex code to validate a valid email format was used
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      //   Testing the "email" property in the Vue data() object returning a boolean
-      return emailRegex.test(email);
-    },
-    // Create a function to "handleSubmit" of form data entered
-    handleSubmit() {
-      // If statement to check that if "validateEmail == true"
-      if (this.validateEmail(this.email)) {
-        // If true "emailError" is set to false and "completed" is set to true in Vue data() object
-        this.emailError = false;
-        this.completed = true;
-        // Setting a "user/email" key/value in local storage
-        localStorage.setItem('user', this.email);
-        // Printing "email" value from local storage
-        console.log(localStorage.getItem('user'));
-        // If "validateEmail == false" setting "emailError == true" and "completed == false" in Vue data() object
+  setup() {
+    // Create/call formStore variable/function
+    const formStore = useFormStore();
+
+    const emailInput = ref('');
+    // Refactor handleSubmit()
+    const handleSubmit = () => {
+      // Validat email input "value"
+      if (validateEmail(emailInput.value)) {
+        // Initiate "complete" message to display by setting to true
+        formStore.setIsCompleteDisplay(true);
+        // Set email state in formStore
+        formStore.setEmail(emailInput.value);
+        // Display current State in console
+        console.log('Current State: ', formStore.$state);
+        // Clear input field
+        emailInput.value = '';
+        // Clear complete message after 5 seconds
+        setTimeout(() => {
+          formStore.setIsCompleteDisplay(false);
+        }, 5000);
       } else {
-        this.emailError = true;
-        this.completed = false;
+        // Initiate error message to display and print current state in console
+        formStore.setEmailError(true);
+        console.log('Current State: ', formStore.$state);
       }
-    },
+    };
+    // Validate Email
+    const validateEmail = (email) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    };
+    return {
+      formStore,
+      handleSubmit,
+      emailInput,
+    };
   },
 };
 </script>
